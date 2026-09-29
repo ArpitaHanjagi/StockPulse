@@ -1,28 +1,41 @@
-import 'dotenv/config';
-import mongoose from 'mongoose';
+import { readFileSync } from 'fs';
+import path from 'path';
+import { cert, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
+// Checks that the Firebase service account works and Firestore is reachable
+// by writing, reading and deleting one throwaway document.
 async function main() {
-    const uri = process.env.MONGODB_URI;
-    if (!uri) {
-        console.error('ERROR: MONGODB_URI must be set in .env');
+    const inline = process.env.FIREBASE_SERVICE_ACCOUNT;
+    const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    const emulator = process.env.FIRESTORE_EMULATOR_HOST;
+
+    let app;
+    let label;
+    if (inline || keyPath) {
+        const account = JSON.parse(inline ?? readFileSync(path.resolve(keyPath), 'utf8'));
+        app = initializeApp({ credential: cert(account) });
+        label = `project="${account.project_id}"`;
+    } else if (emulator) {
+        app = initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID ?? 'demo-stockpulse' });
+        label = `emulator=${emulator}`;
+    } else {
+        console.error('ERROR: set FIREBASE_SERVICE_ACCOUNT_PATH (or FIREBASE_SERVICE_ACCOUNT) in .env');
         process.exit(1);
     }
 
     try {
         const startedAt = Date.now();
-        await mongoose.connect(uri, { bufferCommands: false });
-        const elapsed = Date.now() - startedAt;
+        const ref = getFirestore(app).collection('_healthcheck').doc('ping');
+        await ref.set({ at: new Date() });
+        await ref.get();
+        await ref.delete();
 
-        const dbName = mongoose.connection?.name || '(unknown)';
-        const host = mongoose.connection?.host || '(unknown)';
-
-        console.log(`OK: Connected to MongoDB [db="${dbName}", host="${host}", time=${elapsed}ms]`);
-        await mongoose.connection.close();
+        console.log(`OK: Connected to Firestore [${label}, time=${Date.now() - startedAt}ms]`);
         process.exit(0);
     } catch (err) {
-        console.error('ERROR: Database connection failed');
+        console.error('ERROR: Firestore connection failed');
         console.error(err);
-        try { await mongoose.connection.close(); } catch {}
         process.exit(1);
     }
 }

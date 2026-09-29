@@ -1,7 +1,8 @@
 import { createAuthClient } from "better-auth/react";
 
-export const authClient = createAuthClient({
-    baseURL: process.env.NEXT_PUBLIC_BASE_URL,
-});
+// No baseURL: in the browser better-auth uses the page's own origin, so
+// sign-in works on localhost, the production domain and preview URLs alike
+// without a build-time env var that could point at the wrong place.
+export const authClient = createAuthClient();
 
 export const { signIn, signUp, signOut, useSession } = authClient;

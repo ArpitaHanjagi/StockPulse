@@ -1,86 +1,97 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import {
-    HEATMAP_WIDGET_CONFIG,
-    MARKET_DATA_WIDGET_CONFIG,
-    MARKET_OVERVIEW_WIDGET_CONFIG,
-    TOP_STORIES_WIDGET_CONFIG
-} from "@/lib/constants";
-import TradingViewWidget from "@/components/TradingViewWidget";
+import MarketOverview from "@/components/dashboard/MarketOverview";
+import SectorHeatmap from "@/components/dashboard/SectorHeatmap";
+import MarketQuotes from "@/components/dashboard/MarketQuotes";
+import NewsList from "@/components/NewsList";
+import QuoteCards from "@/components/dashboard/QuoteCards";
+import LiveBoard from "@/components/dashboard/LiveBoard";
+import NewsSkeleton from "@/components/NewsSkeleton";
 import { getWatchlistWithData } from "@/lib/actions/watchlist.actions";
+import { getMarketBoard, getMarketNews, getQuotes } from "@/lib/actions/market.actions";
+import { getCurrentUser } from "@/lib/better-auth/session";
+import { getIndustryPicks } from "@/lib/market/symbols";
+import { toStockWithData } from "@/lib/market/format";
+
+// New users with an empty watchlist get live cards for well-known names in
+// the industry they picked at sign-up, so the dashboard is never empty.
+const getSuggestions = async (industry?: string | null) => {
+    const picks = getIndustryPicks(industry);
+    const quotes = await getQuotes(picks);
+    return picks.map((symbol) => toStockWithData({ symbol, company: quotes[symbol]?.name ?? symbol }, quotes[symbol]));
+};
+
+// Headlines take several upstream searches, so they stream in separately
+// instead of holding up the rest of the dashboard.
+const TopStories = async () => {
+    const news = await getMarketNews();
+    return <NewsList news={news.slice(0, 8)} compact />;
+};
+
+const Panel = ({ title, children, className = '' }: { title: string; children: React.ReactNode; className?: string }) => (
+    <section className={`min-w-0 rounded-lg border border-gray-700 bg-gray-800 p-4 sm:p-5 ${className}`}>
+        <h2 className="mb-4 text-lg font-semibold text-gray-100 sm:text-xl">{title}</h2>
+        {children}
+    </section>
+);
 
 const Home = async () => {
-    const scriptUrl = `https://s3.tradingview.com/external-embedding/embed-widget-`;
-    const watchlist = await getWatchlistWithData();
-    const topWatchlist = watchlist.slice(0, 4);
+    const [watchlist, user, board] = await Promise.all([
+        getWatchlistWithData(4),
+        getCurrentUser(),
+        getMarketBoard(),
+    ]);
+    const industry = user?.preferredIndustry;
+    const cards = watchlist.length > 0 ? watchlist : await getSuggestions(industry);
+    const liveSymbols = [
+        ...cards.map((c) => c.symbol),
+        ...Object.values(board.sectors).flat().flatMap((s) => s.items.map((i) => i.symbol)),
+        ...board.groups.flatMap((g) => g.items.map((i) => i.symbol)),
+    ];
 
     return (
+        <LiveBoard symbols={liveSymbols}>
         <div className="flex min-h-screen home-wrapper">
-            {topWatchlist.length > 0 && (
-                <section className="grid w-full grid-cols-2 gap-4 lg:grid-cols-4">
-                    {topWatchlist.map((item) => (
-                        <Link
-                            key={item.symbol}
-                            href={`/stocks/${item.symbol}`}
-                            className="flex flex-col gap-1 rounded-lg border border-gray-700 bg-gray-800 p-4 transition-colors hover:border-yellow-500"
-                        >
-                            <span className="text-sm text-gray-500">{item.symbol}</span>
-                            <span className="text-lg font-semibold text-gray-100">{item.priceFormatted ?? '—'}</span>
-                            <span
-                                className={`text-sm ${
-                                    item.changePercent === undefined
-                                        ? 'text-gray-500'
-                                        : item.changePercent >= 0
-                                          ? 'text-green-500'
-                                          : 'text-red-500'
-                                }`}
-                            >
-                                {item.changeFormatted ?? '—'}
-                            </span>
+            {cards.length > 0 && (
+                <section className="flex w-full flex-col gap-3">
+                    <div className="flex items-baseline justify-between">
+                        <h2 className="text-lg font-semibold text-gray-100">
+                            {watchlist.length > 0 ? 'Your Watchlist' : `Suggested for you${industry ? ` · ${industry}` : ''}`}
+                        </h2>
+                        <Link href="/watchlist" className="text-sm text-gray-500 hover:text-yellow-500">
+                            {watchlist.length > 0 ? 'View all →' : 'Build your watchlist →'}
                         </Link>
-                    ))}
+                    </div>
+                    <QuoteCards items={cards} />
                 </section>
             )}
 
-            <section className="grid w-full gap-8 home-section">
-                <div className="md:col-span-1 xl:col-span-1">
-                    <TradingViewWidget
-                        title="Market Overview"
-                        scriptUrl={`${scriptUrl}market-overview.js`}
-                        config={MARKET_OVERVIEW_WIDGET_CONFIG}
-                        className="custom-chart"
-                        height={600}
-                    />
-                </div>
-                <div className="md:col-span-1 xl:col-span-2">
-                    <TradingViewWidget
-                        title="Stock Heatmap"
-                        scriptUrl={`${scriptUrl}stock-heatmap.js`}
-                        config={HEATMAP_WIDGET_CONFIG}
-                        height={600}
-                    />
-                </div>
-            </section>
+            <div className="grid w-full gap-6 xl:grid-cols-3">
+                <Panel title="Market Overview">
+                    <MarketOverview groups={board.groups} />
+                </Panel>
+                <Panel title="Stock Heatmap" className="xl:col-span-2">
+                    <SectorHeatmap sectors={board.sectors} />
+                </Panel>
+            </div>
 
-            <section className="grid w-full gap-8 home-section">
-                <div className="h-full md:col-span-1 xl:col-span-1">
-                    <TradingViewWidget
-                        title="Top Stories"
-                        scriptUrl={`${scriptUrl}timeline.js`}
-                        config={TOP_STORIES_WIDGET_CONFIG}
-                        className="custom-chart"
-                        height={600}
-                    />
-                </div>
-                <div className="h-full md:col-span-1 xl:col-span-2">
-                    <TradingViewWidget
-                        title="Market Quotes"
-                        scriptUrl={`${scriptUrl}market-quotes.js`}
-                        config={MARKET_DATA_WIDGET_CONFIG}
-                        height={600}
-                    />
-                </div>
-            </section>
+            <div className="grid w-full gap-6 xl:grid-cols-3">
+                <Panel title="Top Stories">
+                    <div className="[&_.watchlist-news]:grid-cols-1">
+                        <Suspense fallback={<NewsSkeleton count={5} />}>
+                            <TopStories />
+                        </Suspense>
+                    </div>
+                    <Link href="/news" className="mt-4 inline-block text-sm text-yellow-500 hover:underline">
+                        All market news →
+                    </Link>
+                </Panel>
+                <Panel title="Market Quotes" className="xl:col-span-2">
+                    <MarketQuotes groups={board.groups} />
+                </Panel>
+            </div>
         </div>
+        </LiveBoard>
     );
 };
 

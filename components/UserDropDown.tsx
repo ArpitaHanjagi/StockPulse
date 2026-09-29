@@ -15,10 +15,18 @@ import {
     AvatarImage,
 } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { Bell, KeyRound, LogOut, Star, UserRound } from "lucide-react";
 import { toast } from "sonner";
-import NavItems from "@/components/NavItems";
 import { signOutUser } from "@/lib/actions/auth.actions";
+
+const MENU_LINKS = [
+    { href: "/profile", label: "My Profile", icon: UserRound },
+    { href: "/watchlist", label: "Watchlist", icon: Star },
+    { href: "/watchlist", label: "Price Alerts", icon: Bell },
+    { href: "/profile#security", label: "Change Password", icon: KeyRound },
+];
+
+const itemClass = "text-gray-100 text-md font-medium focus:bg-transparent focus:text-yellow-500 transition-colors cursor-pointer";
 
 const UserDropdown = ({ user }: { user?: { name: string; email: string; image?: string | null } }) => {
     const router = useRouter();
@@ -48,7 +56,7 @@ const UserDropdown = ({ user }: { user?: { name: string; email: string; image?: 
                     </AvatarFallback>
                 </Avatar>
 
-                <div className="hidden md:flex flex-col items-start">
+                <div className="hidden xl:flex flex-col items-start">
                     <span className="text-base font-medium text-gray-400">
                         {displayName}
                     </span>
@@ -80,19 +88,20 @@ const UserDropdown = ({ user }: { user?: { name: string; email: string; image?: 
 
                     <DropdownMenuSeparator className="bg-gray-600" />
 
-                    <DropdownMenuItem
-                        onClick={handleSignOut}
-                        className="text-gray-100 text-md font-medium focus:bg-transparent focus:text-yellow-500 transition-colors cursor-pointer"
-                    >
-                        <LogOut className="h-4 w-4 mr-2 hidden sm:block" />
+                    {MENU_LINKS.map(({ href, label, icon: Icon }) => (
+                        <DropdownMenuItem key={label} onClick={() => router.push(href)} className={itemClass}>
+                            <Icon className="h-4 w-4 mr-2" />
+                            {label}
+                        </DropdownMenuItem>
+                    ))}
+
+                    <DropdownMenuSeparator className="bg-gray-600" />
+
+                    <DropdownMenuItem onClick={handleSignOut} className={itemClass}>
+                        <LogOut className="h-4 w-4 mr-2" />
                         Logout
                     </DropdownMenuItem>
 
-                    <DropdownMenuSeparator className="hidden sm:block bg-gray-600" />
-
-                    <nav className="sm:hidden">
-                        <NavItems />
-                    </nav>
                 </DropdownMenuGroup>
             </DropdownMenuContent>
         </DropdownMenu>

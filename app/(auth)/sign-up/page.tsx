@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import {useForm} from "react-hook-form";
 import InputField from "@/components/forms/InputField";
 import SelectField from "@/components/forms/SelectField";
-import {INVESTMENT_GOALS, PREFERRED_INDUSTRIES, RISK_TOLERANCE_OPTIONS} from "@/lib/constants";
+import {EMAIL_PATTERN, INVESTMENT_GOALS, PREFERRED_INDUSTRIES, RISK_TOLERANCE_OPTIONS} from "@/lib/constants";
 import {CountrySelectField} from "@/components/forms/CountrySelectField";
-import { Control } from "react-hook-form";
 import FooterLink from "@/components/forms/FooterLink";
 import { signUpWithEmail } from "@/lib/actions/auth.actions";
 
@@ -25,7 +24,7 @@ const SignUp=()=>{
             fullName:"",
             email:"",
             password:"",
-            country:"US",
+            country:"IN",
             investmentGoals:"Growth",
             riskTolerance:"Medium",
             preferredIndustry:"Technology",
@@ -47,7 +46,7 @@ const SignUp=()=>{
 
     return(
        <>
-           <h1 className="form-title">Sign Up $ Personalize</h1>
+           <h1 className="form-title">Sign Up & Personalize</h1>
            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                <InputField
                    name="fullName"
@@ -55,7 +54,7 @@ const SignUp=()=>{
                    placeholder="John Doe"
                    register={register}
                    error={errors.fullName}
-                   validation={{required:"Full name is required", minLength:2}}
+                   validation={{required:"Full name is required", minLength:{ value: 2, message: "Full name must be at least 2 characters" }}}
                />
                <InputField
                    name="email"
@@ -63,7 +62,7 @@ const SignUp=()=>{
                    placeholder="JohnDoe@gmail.com"
                    register={register}
                    error={errors.email}
-                   validation={{ required: "Email is required", pattern: { value: /^\w+@\w+\.\w+$/, message: "Please enter a valid email address" } }}
+                   validation={{ required: "Email is required", pattern: { value: EMAIL_PATTERN, message: "Please enter a valid email address" } }}
                />  <InputField
                name="password"
                label="Password"
@@ -71,7 +70,7 @@ const SignUp=()=>{
                type="password"
                register={register}
                error={errors.password}
-               validation={{required:"Password is required", minLength:8}}
+               validation={{required:"Password is required", minLength:{ value: 8, message: "Password must be at least 8 characters" }}}
            />
 
              <CountrySelectField name="country"

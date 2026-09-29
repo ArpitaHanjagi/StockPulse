@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Star, Trash2 } from 'lucide-react';
+import { Loader2, Star, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { addToWatchlist, removeFromWatchlist } from '@/lib/actions/watchlist.actions';
@@ -19,18 +19,22 @@ const WatchlistButton = ({
     const [added, setAdded] = useState(isInWatchlist);
     const [loading, setLoading] = useState(false);
 
+    // Optimistic: flip the button straight away and roll back if the
+    // server rejects the change, so the click feels instant.
     const handleClick = async () => {
+        const nowAdded = !added;
+        setAdded(nowAdded);
         setLoading(true);
-        const result = added ? await removeFromWatchlist(symbol) : await addToWatchlist(symbol, company);
+
+        const result = nowAdded ? await addToWatchlist(symbol, company) : await removeFromWatchlist(symbol);
         setLoading(false);
 
         if (!result.success) {
+            setAdded(!nowAdded);
             toast.error(result.error ?? 'Something went wrong');
             return;
         }
 
-        const nowAdded = !added;
-        setAdded(nowAdded);
         onWatchlistChange?.(symbol, nowAdded);
         toast.success(nowAdded ? `Added ${symbol} to watchlist` : `Removed ${symbol} from watchlist`);
         router.refresh();
@@ -61,7 +65,8 @@ const WatchlistButton = ({
             disabled={loading}
             className={added ? 'watchlist-btn watchlist-remove' : 'watchlist-btn'}
         >
-            {loading ? 'Please wait...' : added ? 'Remove from Watchlist' : 'Add to Watchlist'}
+            {loading && <Loader2 className="size-4 animate-spin" />}
+            {added ? 'Remove from Watchlist' : 'Add to Watchlist'}
         </Button>
     );
 };

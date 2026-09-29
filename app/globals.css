@@ -139,6 +139,35 @@
   body {
     @apply bg-gray-900 text-foreground;
   }
+  /* Tailwind v4 gives buttons the default arrow cursor; restore the pointer
+     on everything clickable, and show "not allowed" when it's disabled. */
+  button,
+  [role="button"],
+  [role="tab"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="combobox"],
+  [role="option"],
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  select,
+  summary,
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="range"],
+  input[type="color"],
+  input[type="file"],
+  input[type="submit"],
+  input[type="reset"],
+  input[type="button"] {
+    cursor: pointer;
+  }
+  :is(button, [role="button"], select, input):disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {
@@ -146,7 +175,7 @@
     @apply mx-auto max-w-screen-2xl px-4 md:px-6 lg:px-8;
   }
   .yellow-btn {
-    @apply h-12 cursor-pointer bg-gradient-to-b from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-gray-950 font-medium text-base rounded-lg shadow-lg disabled:opacity-50;
+    @apply h-12 cursor-pointer disabled:cursor-not-allowed bg-gradient-to-b from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-gray-950 font-medium text-base rounded-lg shadow-lg disabled:opacity-50;
   }
   .home-wrapper {
     @apply text-gray-400 flex-col gap-4 md:gap-10 items-center sm:items-start;
@@ -161,16 +190,16 @@
     @apply flex justify-between items-center px-6 py-4 text-gray-500;
   }
   .auth-layout {
-    @apply flex flex-col justify-between lg:flex-row h-screen bg-gray-900 relative overflow-hidden;
+    @apply flex flex-col lg:flex-row min-h-screen lg:h-screen bg-gray-900 relative lg:overflow-hidden;
   }
   .auth-logo {
     @apply pt-6 lg:pt-8 mb-8 lg:mb-12;
   }
   .auth-left-section {
-    @apply w-full lg:w-[45%] lg:h-screen px-6 lg:px-16 flex flex-col overflow-y-auto;
+    @apply w-full lg:w-[45%] lg:h-screen px-6 sm:px-12 lg:px-16 flex flex-col lg:overflow-y-auto;
   }
   .auth-right-section {
-    @apply w-full max-lg:border-t max-lg:border-gray-600 lg:w-[55%] lg:h-screen bg-gray-800 px-6 py-4 md:p-6 lg:py-12 lg:px-18 flex flex-col justify-start;
+    @apply w-full max-lg:border-t max-lg:border-gray-600 lg:w-[55%] lg:h-screen bg-gray-800 px-6 py-8 sm:px-12 md:py-10 lg:py-12 lg:px-18 flex flex-col justify-start overflow-hidden;
   }
   .auth-blockquote {
     @apply text-sm md:text-xl lg:text-2xl font-medium text-gray-400 mb-1 md:mb-6 lg:mb-8;
@@ -212,7 +241,7 @@
     @apply cursor-pointer hover:text-yellow-500;
   }
   .search-btn {
-    @apply cursor-pointer px-4 py-2 w-fit flex items-center gap-2 text-sm md:text-base bg-yellow-500 hover:bg-yellow-500 text-black font-medium rounded;
+    @apply cursor-pointer disabled:cursor-not-allowed px-4 py-2 w-fit flex items-center gap-2 text-sm md:text-base bg-yellow-500 hover:bg-yellow-500 text-black font-medium rounded;
   }
   .search-dialog {
     @apply !bg-gray-800 lg:min-w-[800px] border-gray-600 fixed top-10 left-1/2 -translate-x-1/2 translate-y-10;
@@ -254,7 +283,7 @@
     @apply w-full grid-cols-1 gap-6 xl:grid-cols-3 space-y-6 sm:space-y-8;
   }
   .watchlist-btn {
-    @apply bg-yellow-500 text-base hover:bg-yellow-500 text-gray-900 w-full rounded h-11 font-semibold cursor-pointer;
+    @apply bg-yellow-500 text-base hover:bg-yellow-500 text-gray-900 w-full rounded h-11 font-semibold cursor-pointer disabled:cursor-not-allowed;
   }
   .watchlist-remove {
     @apply bg-red-500! hover:bg-red-500! text-gray-900!
@@ -275,13 +304,10 @@
     @apply text-gray-500 mb-6 max-w-md;
   }
   .watchlist-container {
-    @apply flex flex-col-reverse lg:grid lg:grid-cols-3 gap-8;
+    @apply flex flex-col lg:grid lg:grid-cols-3 gap-8;
   }
   .watchlist {
-    @apply lg:col-span-2 space-y-8;
-  }
-  .watchlist-alerts {
-    @apply items-start gap-6 h-full flex-col w-full lg:col-span-1;
+    @apply min-w-0 lg:col-span-2 space-y-4;
   }
   .watchlist-icon-btn {
     @apply w-fit cursor-pointer hover:bg-transparent! text-gray-400 hover:text-yellow-500;
@@ -317,7 +343,7 @@
     @apply font-medium text-base
   }
   .add-alert {
-    @apply flex text-sm items-center whitespace-nowrap gap-1.5 px-3 w-fit py-2 text-yellow-600 border border-yellow-600/20 rounded font-medium bg-transparent hover:bg-transparent cursor-pointer transition-colors;
+    @apply flex text-sm items-center whitespace-nowrap gap-1.5 px-3 w-fit py-2 text-yellow-600 border border-yellow-600/20 rounded font-medium bg-transparent hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition-colors;
   }
   .watchlist-news {
     @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
@@ -346,36 +372,6 @@
   .alert-title {
     @apply text-xl font-semibold text-gray-100;
   }
-  .alert-list {
-    @apply overflow-y-auto w-full max-h-[911px] rounded-lg flex border border-gray-600 flex-col gap-4 bg-gray-800 p-3 flex-1;
-  }
-  .alert-empty {
-    @apply px-6 py-8 text-center text-gray-500/50;
-  }
-  .alert-item {
-    @apply p-4 rounded-lg bg-gray-700 border border-gray-600;
-  }
-  .alert-name {
-    @apply mb-2 text-lg text-yellow-500 font-semibold;
-  }
-  .alert-details {
-    @apply flex border-b pb-3 items-center justify-between gap-3 mb-2;
-  }
-  .alert-company {
-    @apply text-gray-400 text-base;
-  }
-  .alert-price {
-    @apply text-gray-100 font-bold;
-  }
-  .alert-actions {
-    @apply flex items-end justify-between;
-  }
-  .alert-update-btn {
-    @apply text-gray-400 rounded-full bg-transparent hover:bg-green-500/15 cursor-pointer;
-  }
-  .alert-delete-btn {
-    @apply text-gray-400 rounded-full hover:bg-red-600/15 bg-transparent cursor-pointer transition-colors;
-  }
 }
 
 /* Market News Component Styles */
@@ -386,74 +382,6 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
-}
-
-/* TradingView Advanced Chart Widget Styles */
-.tradingview-widget-container {
-  position: relative;
-  background-color: #141414 !important;
-  border-radius: 8px !important;
-  overflow: hidden !important;
-}
-
-.tv-embed-widget-wrapper__body {
-  background-color: #141414 !important;
-}
-
-.tradingview-widget-container__widget {
-  background-color: #141414 !important;
-  height: 100% !important;
-
-}
-
-.widget-stock-heatmap-container .screenerMapWrapper-BBVfGP0b {
-  overflow: hidden !important;
-  background: #141414 !important;
-  background-color: #141414 !important;
-}
-
-.canvasContainer-tyaAU8aH {
-  background: #141414 !important;
-  background-color: #141414 !important;
-}
-
-.tv-site-widget--bg_none {
-  background-color: transparent !important;
-}
-
-.tradingview-widget-copyright {
-  font-size: 11px;
-  color: #9ca3af;
-  text-align: center;
-  padding: 4px 0;
-  background-color: transparent;
-}
-
-.tradingview-widget-copyright a {
-  color: #60a5fa;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.tradingview-widget-copyright a:hover {
-  color: #93c5fd;
-  text-decoration: underline;
-}
-
-.tv-embed-widget-wrapper .tv-embed-widget-wrapper__body {
-  background: #141414 !important;
-  background-color: #141414 !important;
-}
-
-.tradingview-widget-container iframe {
-  background-color: #141414 !important;
-  width: 100% !important;
-}
-
-.custom-chart.tradingview-widget-container iframe {
-  border: 1px solid #30333A;
-  border-radius: 8px !important;
-  overflow: hidden !important;
 }
 
 /* Custom scrollbar that shows on hover */
@@ -486,4 +414,46 @@
 
 .scrollbar-hide-default::-webkit-scrollbar-thumb:hover {
   background-color: #9095A1;
+}
+/* Live price flash: a brief pulse when a polled price or % change moves —
+   green for upticks, red for downticks. Only the opacity of an overlay is
+   animated (GPU-composited, no layout or paint work), and it is skipped
+   entirely when the OS asks for reduced motion. */
+@keyframes flash-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+.flash-up, .flash-down { position: relative; isolation: isolate; }
+.flash-up::after, .flash-down::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  animation: flash-fade 1.2s ease-out;
+}
+.flash-up::after { background: rgb(34 197 94 / 0.38); }
+.flash-down::after { background: rgb(239 68 68 / 0.38); }
+/* Stronger variant for tiles that already have a coloured background. */
+.flash-strong::after { z-index: 1; mix-blend-mode: screen; }
+.flash-strong.flash-up::after { background: rgb(74 222 128 / 0.55); }
+.flash-strong.flash-down::after { background: rgb(248 113 113 / 0.55); }
+/* Standalone overlay (see <FlashOverlay>): remounted per update so a
+   parent with a shared-layout animation never has to remount. */
+.flash-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+  animation: flash-fade 1.2s ease-out;
+}
+.flash-overlay.up { background: rgb(74 222 128 / 0.45); mix-blend-mode: screen; }
+.flash-overlay.down { background: rgb(248 113 113 / 0.45); mix-blend-mode: screen; }
+@media (prefers-reduced-motion: reduce) {
+  .flash-up::after, .flash-down::after, .flash-overlay { animation: none; }
 }

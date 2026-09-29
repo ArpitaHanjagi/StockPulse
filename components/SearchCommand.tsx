@@ -13,14 +13,22 @@ import {
     CommandGroup,
     CommandItem,
 } from '@/components/ui/command';
-import { searchStocks } from '@/lib/actions/finnhub.actions';
+import { searchStocks } from '@/lib/actions/market.actions';
 import { addToWatchlist, removeFromWatchlist } from '@/lib/actions/watchlist.actions';
 import { getRecentSearches, addRecentSearch, clearRecentSearches, type RecentSearch } from '@/lib/recent-searches';
+import { displaySymbol } from '@/lib/market/symbols';
 
 const toggleWatchlistFlag = (symbol: string) => (list: StockWithWatchlistStatus[]) =>
     list.map((s) => (s.symbol === symbol ? { ...s, isInWatchlist: !s.isInWatchlist } : s));
 
-const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }: SearchCommandProps) => {
+const SearchCommand = ({
+    renderAs = 'button',
+    label = 'Search',
+    initialStocks,
+    shortcut = true,
+    triggerClassName,
+    triggerContent,
+}: SearchCommandProps) => {
     const router = useRouter();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
@@ -38,7 +46,9 @@ const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }:
     const showEmptyState = !showLoading && !showError && resultCount === 0;
     const showRecent = !showLoading && !showError && !trimmedQuery && recentSearches.length > 0;
 
+    // Only one instance should own the Ctrl/⌘+K shortcut.
     useEffect(() => {
+        if (!shortcut) return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -48,7 +58,7 @@ const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }:
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [shortcut]);
 
     useEffect(() => {
         if (!open || !trimmedQuery) return;
@@ -69,21 +79,25 @@ const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }:
         return () => clearTimeout(timeout);
     }, [trimmedQuery, open]);
 
+    // Optimistic: flip the star immediately and flip it back on failure.
     const handleToggleWatchlist = useCallback(async (stock: StockWithWatchlistStatus) => {
+        const toggle = toggleWatchlistFlag(stock.symbol);
+        setDefaultStocks(toggle);
+        setResults(toggle);
+
         const result = stock.isInWatchlist
             ? await removeFromWatchlist(stock.symbol)
             : await addToWatchlist(stock.symbol, stock.name);
 
         if (!result.success) {
+            setDefaultStocks(toggle);
+            setResults(toggle);
             toast.error(result.error ?? 'Something went wrong');
             return;
         }
 
-        const toggle = toggleWatchlistFlag(stock.symbol);
-        setDefaultStocks(toggle);
-        setResults(toggle);
         toast.success(
-            stock.isInWatchlist ? `Removed ${stock.symbol} from watchlist` : `Added ${stock.symbol} to watchlist`
+            stock.isInWatchlist ? `Removed ${displaySymbol(stock.symbol)} from watchlist` : `Added ${displaySymbol(stock.symbol)} to watchlist`
         );
     }, []);
 
@@ -106,9 +120,10 @@ const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }:
         <>
             <button
                 onClick={() => setOpen(true)}
-                className={renderAs === 'text' ? 'search-text' : 'search-btn'}
+                className={triggerClassName ?? (renderAs === 'text' ? 'search-text' : 'search-btn')}
+                aria-label={label}
             >
-                {label}
+                {triggerContent ?? label}
             </button>
 
             <CommandDialog
@@ -178,7 +193,7 @@ const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }:
                                                 <div className="search-item-link">
                                                     <TrendingUp className="opacity-60" />
                                                     <span className="search-item-name">{recent.name}</span>
-                                                    <span className="ml-auto text-xs text-gray-500">{recent.symbol}</span>
+                                                    <span className="ml-auto text-xs text-gray-500">{displaySymbol(recent.symbol)}</span>
                                                 </div>
                                             </CommandItem>
                                         ))}
@@ -196,7 +211,10 @@ const SearchCommand = ({ renderAs = 'button', label = 'Search', initialStocks }:
                                             <div className="search-item-link">
                                                 <TrendingUp className="opacity-60" />
                                                 <span className="search-item-name">{stock.name}</span>
-                                                <span className="text-xs text-gray-500">{stock.symbol}</span>
+                                                <span className="text-xs text-gray-500">
+                                                    {displaySymbol(stock.symbol)}
+                                                    {trimmedQuery && stock.exchange ? ` · ${stock.exchange}` : ''}
+                                                </span>
                                                 <button
                                                     type="button"
                                                     className="ml-auto"

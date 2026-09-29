@@ -6,6 +6,7 @@ import {
     Controller,
     FieldError,
     FieldPath,
+    FieldValues,
 } from 'react-hook-form';
 import ReactCountryFlag from 'react-country-flag';
 import {
@@ -26,10 +27,10 @@ import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import countryList from 'react-select-country-list';
 
-type CountrySelectProps = {
-    name: FieldPath<SignUpFormData>;
+type CountrySelectProps<T extends FieldValues> = {
+    name: FieldPath<T>;
     label: string;
-    control: Control<SignUpFormData>;
+    control: Control<T>;
     error?: FieldError;
     required?: boolean;
 };
@@ -130,20 +131,20 @@ const CountrySelect = ({
     );
 };
 
-export const CountrySelectField = ({
+export const CountrySelectField = <T extends FieldValues>({
                                        name,
                                        label,
                                        control,
                                        error,
                                        required = false,
-                                   }: CountrySelectProps) => {
+                                   }: CountrySelectProps<T>) => {
     return (
         <div className="space-y-2">
             <Label htmlFor={name} className="form-label">
                 {label}
             </Label>
 
-            <Controller<SignUpFormData>
+            <Controller<T>
                 name={name}
                 control={control}
                 rules={{
@@ -153,7 +154,7 @@ export const CountrySelectField = ({
                 }}
                 render={({ field }) => (
                     <CountrySelect
-                        value={field.value}
+                        value={field.value as string}
                         onChange={field.onChange}
                     />
                 )}

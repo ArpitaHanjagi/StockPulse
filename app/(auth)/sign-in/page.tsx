@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import InputField from '@/components/forms/InputField';
 import FooterLink from '@/components/forms/FooterLink';
 import { signInWithEmail } from '@/lib/actions/auth.actions';
+import { EMAIL_PATTERN } from '@/lib/constants';
 
 const SignIn = () => {
     const router = useRouter();
@@ -29,6 +30,11 @@ const SignIn = () => {
         if (result.success) {
             router.push('/');
             router.refresh();
+        } else if (result.code === 'USER_NOT_FOUND') {
+            toast.error('Account not found', {
+                description: result.error,
+                action: { label: 'Create account', onClick: () => router.push('/sign-up') },
+            });
         } else {
             toast.error('Sign in failed', {
                 description: result.error ?? 'Invalid email or password',
@@ -44,12 +50,12 @@ const SignIn = () => {
                 <InputField
                     name="email"
                     label="Email"
-                    placeholder="contact@jsmastery.com"
+                    placeholder="you@example.com"
                     register={register}
                     error={errors.email}
                     validation={{
                         required: 'Email is required',
-                        pattern: /^\w+@\w+\.\w+$/,
+                        pattern: { value: EMAIL_PATTERN, message: 'Please enter a valid email address' },
                     }}
                 />
 
@@ -62,7 +68,7 @@ const SignIn = () => {
                     error={errors.password}
                     validation={{
                         required: 'Password is required',
-                        minLength: 8,
+                        minLength: { value: 8, message: 'Password must be at least 8 characters' },
                     }}
                 />
 

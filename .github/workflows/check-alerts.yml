@@ -1,0 +1,33 @@
+# Triggers the deployed app's price-alert check every 5 minutes, so alerts
+# fire even when nobody has the app open. GitHub may delay scheduled runs by
+# a few minutes under load.
+#
+# Setup (GitHub repo -> Settings -> Secrets and variables -> Actions):
+#   APP_URL      your deployed URL, e.g. https://your-app.vercel.app
+#   CRON_SECRET  the same value as CRON_SECRET on your host
+# Until both are set, this workflow does nothing.
+
+name: Check price alerts
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check-alerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call /api/cron/check-alerts
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "APP_URL or CRON_SECRET secret not set; skipping."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${APP_URL%/}/api/cron/check-alerts"

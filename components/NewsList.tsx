@@ -1,5 +1,4 @@
 import { Newspaper } from "lucide-react";
-import { NO_MARKET_NEWS } from "@/lib/constants";
 import NewsImage from "@/components/NewsImage";
 
 const formatDate = (unixSeconds: number) =>
@@ -11,10 +10,10 @@ const formatDate = (unixSeconds: number) =>
         minute: '2-digit',
     });
 
-// Finnhub often reuses a wire-service's logo as the "image" for every one of
-// its articles instead of a real photo. A URL that repeats across multiple
-// articles in the same batch is almost certainly one of those generic
-// logos, so we treat it as "no real image" and fall back to our own card.
+// Publishers often reuse their logo as the "image" for every article
+// instead of a real photo. A URL that repeats across multiple articles in
+// the same batch is almost certainly one of those generic logos, so we
+// treat it as "no real image".
 const countImageOccurrences = (news: MarketNewsArticle[]) => {
     const counts = new Map<string, number>();
     for (const article of news) {
@@ -23,15 +22,19 @@ const countImageOccurrences = (news: MarketNewsArticle[]) => {
     return counts;
 };
 
-const NewsList = ({ news = [] }: WatchlistNewsProps) => {
+const NewsList = ({
+    news = [],
+    emptyMessage = 'No market news available right now. Please check back later.',
+    compact = false,
+}: WatchlistNewsProps & { compact?: boolean }) => {
     if (news.length === 0) {
-        return <div dangerouslySetInnerHTML={{ __html: NO_MARKET_NEWS }} />;
+        return <p className="text-base text-gray-500">{emptyMessage}</p>;
     }
 
     const imageCounts = countImageOccurrences(news);
 
     return (
-        <div className="watchlist-news">
+        <div className={compact ? 'flex flex-col divide-y divide-gray-700' : 'watchlist-news'}>
             {news.map((article) => {
                 const isGenericImage = !!article.image && (imageCounts.get(article.image) ?? 0) > 1;
                 const hasImage = !!article.image && !isGenericImage;
@@ -42,19 +45,18 @@ const NewsList = ({ news = [] }: WatchlistNewsProps) => {
                         href={article.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="news-item flex flex-col gap-3"
+                        className={compact ? 'group flex flex-col gap-1.5 py-3 first:pt-0' : 'news-item flex flex-col gap-3'}
                     >
-                        <NewsImage src={article.image} alt={article.headline} showFallback={isGenericImage} />
+                        {!compact && <NewsImage src={article.image} alt={article.headline} showFallback={isGenericImage} />}
 
-                        {article.related && <span className="news-tag">{article.related}</span>}
+                        {article.related && !compact && <span className="news-tag">{article.related}</span>}
 
-                        <div className="news-meta flex items-center gap-1.5">
-                            {!hasImage && <Newspaper className="size-3.5 shrink-0 text-gray-600" />}
+                        <div className={compact ? 'flex items-center gap-1.5 text-xs text-gray-500' : 'news-meta flex items-center gap-1.5'}>
+                            {!hasImage && !compact && <Newspaper className="size-3.5 shrink-0 text-gray-600" />}
                             {article.source} · {formatDate(article.datetime)}
                         </div>
-                        <h3 className="news-title">{article.headline}</h3>
-                        {article.summary && <p className="news-summary">{article.summary}</p>}
-                        <span className="news-cta">Read full article &rarr;</span>
+                        <h3 className={compact ? 'text-sm font-medium leading-snug text-gray-100 group-hover:text-yellow-500' : 'news-title'}>{article.headline}</h3>
+                        {!compact && <span className="news-cta">Read full article &rarr;</span>}
                     </a>
                 );
             })}

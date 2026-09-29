@@ -1,14 +1,13 @@
 {
-  "name": "tradex",
+  "name": "stockpulse",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:3000/api/inngest",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:db": "node script/test-db.mjs"
+    "test:db": "node --env-file-if-exists=.env --env-file-if-exists=.env.local script/test-db.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -16,12 +15,10 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "inngest": "^4.14.0",
+    "firebase-admin": "^14.5.0",
     "lucide-react": "^1.27.0",
-    "mongodb": "^7.5.0",
-    "mongoose": "^9.8.1",
+    "motion": "^13.4.6",
     "next": "16.2.12",
-    "nodemailer": "^9.0.3",
     "react": "19.2.4",
     "react-country-flag": "^3.1.0",
     "react-dom": "19.2.4",
@@ -38,7 +35,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-select-country-list": "^2.2.3",
-    "@types/nodemailer": "^8.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",

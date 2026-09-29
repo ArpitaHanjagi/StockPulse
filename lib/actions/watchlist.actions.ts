@@ -1,67 +1,61 @@
 'use server';
 
-import { connectToDatabase } from "@/DATABASE/mongoose";
-import { Watchlist } from "@/lib/models/watchlist.model";
+import { cache } from "react";
+import { COLLECTIONS, getDb, toDate } from "@/DATABASE/firebase";
 import { getCurrentUser } from "@/lib/better-auth/session";
-import { getQuote, getCompanyProfile, getBasicFinancials } from "@/lib/actions/finnhub.actions";
-import { formatINR, formatINRCompact } from "@/lib/currency";
+import { getQuotes } from "@/lib/actions/market.actions";
+import { toStockWithData } from "@/lib/market/format";
+
+type WatchlistDoc = { userId: string; symbol: string; company: string; addedAt: Date };
+
+// One document per (user, symbol), so adding the same stock twice is a
+// no-op by construction. encodeURIComponent keeps ids free of '/'.
+const watchlistDocId = (userId: string, symbol: string) => `${userId}_${encodeURIComponent(symbol.toUpperCase())}`;
+
+// Memoised per request so the header and the page share one Firestore read.
+const getUserWatchlist = cache(async (userId: string): Promise<WatchlistDoc[]> => {
+    const snap = await getDb().collection(COLLECTIONS.watchlists).where('userId', '==', userId).get();
+    return snap.docs
+        .map((doc) => {
+            const data = doc.data();
+            return { userId: data.userId, symbol: data.symbol, company: data.company, addedAt: toDate(data.addedAt) ?? new Date(0) };
+        })
+        .sort((a, b) => b.addedAt.getTime() - a.addedAt.getTime());
+});
 
 export const getWatchlistSymbols = async (): Promise<string[]> => {
     const user = await getCurrentUser();
     if (!user) return [];
 
-    await connectToDatabase();
-    const items = await Watchlist.find({ userId: user.id }, { symbol: 1 }).lean();
-    return items.map((item) => item.symbol);
+    return (await getUserWatchlist(user.id)).map((item) => item.symbol);
 };
 
-export const getWatchlistWithData = async (): Promise<StockWithData[]> => {
+export const getWatchlistWithData = async (limit?: number): Promise<StockWithData[]> => {
     const user = await getCurrentUser();
     if (!user) return [];
 
-    await connectToDatabase();
-    const items = await Watchlist.find({ userId: user.id }).sort({ addedAt: -1 }).lean();
-
-    const withData = await Promise.all(
-        items.map(async (item) => {
-            const [quote, profile, financials] = await Promise.all([
-                getQuote(item.symbol),
-                getCompanyProfile(item.symbol),
-                getBasicFinancials(item.symbol),
-            ]);
-            const peTTM = financials?.metric?.peTTM;
-
-            return {
-                userId: item.userId,
-                symbol: item.symbol,
-                company: item.company,
-                addedAt: item.addedAt,
-                currentPrice: quote?.c,
-                changePercent: quote?.dp,
-                priceFormatted: quote?.c !== undefined ? formatINR(quote.c) : undefined,
-                changeFormatted: quote?.dp ? `${quote.dp > 0 ? '+' : ''}${quote.dp.toFixed(2)}%` : undefined,
-                marketCap: formatINRCompact(profile?.marketCapitalization),
-                peRatio: peTTM ? peTTM.toFixed(2) : undefined,
-            } satisfies StockWithData;
-        })
-    );
-
-    return withData;
+    const items = (await getUserWatchlist(user.id)).slice(0, limit);
+    const quotes = await getQuotes(items.map((item) => item.symbol));
+    return items.map((item) => toStockWithData(item, quotes[item.symbol]));
 };
 
 export const addToWatchlist = async (symbol: string, company: string) => {
     const user = await getCurrentUser();
     if (!user) return { success: false, error: 'You must be signed in to use the watchlist' };
+    if (!symbol.trim()) return { success: false, error: 'Missing stock symbol' };
+
+    const upper = symbol.trim().toUpperCase();
 
     try {
-        await connectToDatabase();
-        await Watchlist.updateOne(
-            { userId: user.id, symbol: symbol.toUpperCase() },
-            { $setOnInsert: { userId: user.id, symbol: symbol.toUpperCase(), company, addedAt: new Date() } },
-            { upsert: true }
-        );
+        await getDb()
+            .collection(COLLECTIONS.watchlists)
+            .doc(watchlistDocId(user.id, upper))
+            .create({ userId: user.id, symbol: upper, company: company.trim() || upper, addedAt: new Date() });
         return { success: true };
     } catch (e) {
+        // ALREADY_EXISTS: it's already in the watchlist, which is what the
+        // user wanted.
+        if ((e as { code?: number }).code === 6) return { success: true };
         console.error('Failed to add to watchlist', e);
         return { success: false, error: 'Failed to add to watchlist' };
     }
@@ -72,8 +66,7 @@ export const removeFromWatchlist = async (symbol: string) => {
     if (!user) return { success: false, error: 'You must be signed in to use the watchlist' };
 
     try {
-        await connectToDatabase();
-        await Watchlist.deleteOne({ userId: user.id, symbol: symbol.toUpperCase() });
+        await getDb().collection(COLLECTIONS.watchlists).doc(watchlistDocId(user.id, symbol.trim())).delete();
         return { success: true };
     } catch (e) {
         console.error('Failed to remove from watchlist', e);

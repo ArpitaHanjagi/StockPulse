@@ -1,25 +1,29 @@
 import Link from "next/link";
-import Image from "next/image";
-import { headers } from "next/headers";
+import Logo from "@/components/Logo";
 import NavItems from "./NavItems";
 import UserDropDown from "@/components/UserDropDown";
-import { auth } from "@/lib/better-auth/auth";
-import { searchStocks } from "@/lib/actions/finnhub.actions";
+import NotificationBell from "@/components/NotificationBell";
+import MarketStatus from "@/components/MarketStatus";
+import { getCurrentUser } from "@/lib/better-auth/session";
+import { searchStocks } from "@/lib/actions/market.actions";
 
 const Header = async () => {
-    const session = await auth.api.getSession({ headers: await headers() });
-    const initialStocks = await searchStocks();
+    const [user, initialStocks] = await Promise.all([getCurrentUser(), searchStocks()]);
 
     return(
         <header className="sticky top-0 header">
             <div className="container header-wrapper">
-            <Link href="/">
-                <Image src="/assets/icons/logo.svg" alt="Signalist logo" width={140} height={32} className="h-8 w-auto cursor-pointer"/>
+            <Link href="/about" aria-label="About StockPulse">
+                <Logo/>
             </Link>
                 <nav className="hidden sm:block">
                     <NavItems initialStocks={initialStocks}/>
                 </nav>
-                <UserDropDown user={session?.user}/>
+                <div className="flex items-center gap-3">
+                    <MarketStatus className="hidden xl:flex"/>
+                    <NotificationBell/>
+                    <UserDropDown user={user ?? undefined}/>
+                </div>
             </div>
         </header>
     )
